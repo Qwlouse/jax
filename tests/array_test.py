@@ -962,7 +962,7 @@ class ShardingTest(jtu.JaxTestCase):
     with self.assertRaisesRegex(
         ValueError,
         r"Sharding NamedSharding\(mesh=Mesh\('replica': 1, 'data': 1, 'mdl': 2\), "
-        r"spec=PartitionSpec\(None, \('mdl',\), None, None\).*\) is only "
+        r"spec=PartitionSpec\(None, 'mdl', None, None\).*\) is only "
         "valid for values of rank at least 4, but was applied to a value of rank 2"):
       new_mps.check_compatible_aval(shape)
 

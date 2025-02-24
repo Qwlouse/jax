@@ -886,8 +886,8 @@ class PJitTest(jtu.BufferDonationTestCase):
     def f(x):
       token = lax.create_token(x)
       token = lax.outfeed(token, x, partitions=(None,))
-      token = lax.outfeed(token, x, partitions=(P(nr_devices, 1),))
-      token = lax.outfeed(token, x, partitions=(P(1, nr_devices),))
+      token = lax.outfeed(token, x, partitions=((nr_devices, 1),))
+      token = lax.outfeed(token, x, partitions=((1, nr_devices),))
       return x
 
     x = np.arange(math.prod(shape), dtype=np.float32).reshape(shape)
@@ -1207,7 +1207,7 @@ class PJitTest(jtu.BufferDonationTestCase):
           ValueError,
           r"One of with_sharding_constraint.*Sharding "
           r"NamedSharding\(mesh=Mesh\('replica': 1, 'data': 1, 'mdl': 2\), "
-          r"spec=PartitionSpec\(None, \('mdl',\), None, None\).*\) is only "
+          r"spec=PartitionSpec\(None, 'mdl', None, None\).*\) is only "
           "valid for values of rank at least 4, but was applied to a value of rank 1"):
         pjit_f(jnp.array([1, 2, 3]))
 
@@ -7169,9 +7169,9 @@ class UtilTest(jtu.JaxTestCase):
     aval = core.ShapedArray((len(devices),) * dims, jnp.float32)
     def roundtrip(spec):
       hlo_sharding = NamedSharding(mesh, spec)._to_xla_hlo_sharding(aval.ndim)
-      parsed_spec = parse_flatten_op_sharding(hlo_sharding, mesh)[0].partitions
-      self.assertEqual(parsed_spec[:len(spec)], spec)
-      self.assertEqual(parsed_spec[len(spec):], ((),) * (len(parsed_spec) - len(spec)))
+      converted_spec = parse_flatten_op_sharding(hlo_sharding, mesh)[0].get_partition_spec()
+      self.assertEqual(converted_spec[:len(spec)], spec)
+      self.assertEqual(converted_spec[len(spec):], ((),) * (len(converted_spec) - len(spec)))
 
     special_specs = [P()]
     for spec in special_specs:

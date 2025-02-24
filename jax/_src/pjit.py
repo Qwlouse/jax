@@ -2726,21 +2726,23 @@ def _mesh_cast_abstract_eval(aval, dst_sharding):
         f' sharding spec. Got source spec={src_sharding.spec} and destination'
         f' spec={dst_sharding.spec}')
   if src_sharding.mesh._any_axis_explicit and dst_sharding.mesh._any_axis_explicit:
-    for s, d in safe_zip(src_sharding.spec, dst_sharding.spec):
-      if s is None and d is None:
+    for s_spec, d_spec in safe_zip(src_sharding.spec, dst_sharding.spec):
+      if s_spec is None and d_spec is None:
         continue
-      if s is None and d is not None:
-        assert (src_sharding.mesh._name_to_type[d] == mesh_lib.AxisTypes.Auto
-                and dst_sharding.mesh._name_to_type[d] == mesh_lib.AxisTypes.Explicit)
+      if s_spec is None and d_spec is not None:
+        for d in d_spec:
+          assert (src_sharding.mesh._name_to_type[d] == mesh_lib.AxisTypes.Auto
+                  and dst_sharding.mesh._name_to_type[d] == mesh_lib.AxisTypes.Explicit)
         continue
-      if s is not None and d is None:
-        assert (src_sharding.mesh._name_to_type[s] == mesh_lib.AxisTypes.Explicit
-                and dst_sharding.mesh._name_to_type[s] == mesh_lib.AxisTypes.Auto)
+      if s_spec is not None and d_spec is None:
+        for s in s_spec:
+          assert (src_sharding.mesh._name_to_type[s] == mesh_lib.AxisTypes.Explicit
+                  and dst_sharding.mesh._name_to_type[s] == mesh_lib.AxisTypes.Auto)
         continue
-      if d != s:
+      if s_spec != d_spec:
         raise ValueError(
             'Explicit data movement in mesh_cast is not allowed. Got src spec:'
-            f' {s} and dst spec: {d}')
+            f' {s_spec} and dst spec: {d_spec}')
   return aval.update(sharding=dst_sharding)
 mesh_cast_p.def_abstract_eval(_mesh_cast_abstract_eval)
 
