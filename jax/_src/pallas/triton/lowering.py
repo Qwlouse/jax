@@ -40,6 +40,7 @@ from jax._src import util
 from jax._src.interpreters import mlir
 from jax._src.interpreters import partial_eval as pe
 from jax._src.lax.control_flow import for_loop
+from jax._src.lib import version as jaxlib_version
 from jax._src.lib.mlir import ir
 from jax._src.lib.mlir.dialects import arith as arith_dialect
 from jax._src.lib.mlir.dialects import math as math_dialect
@@ -2001,11 +2002,13 @@ def _masked_load_lowering_rule(
   if block_info.full_shape_dtype.dtype not in (jnp.int4, jnp.uint4):
     return values
 
-  # XLA packs pairs of `[u]int4` values into a `uint8` value with the first
-  # in the most significant bits and the second in the least significant.
   offsets = _ir_cast(offsets, ir.IntegerType.get_signless(32), signed=False)
-  in_lsb = _mod(offsets, _full(offsets.type, 2), signed=False)
-  in_msb = arith_dialect.xori(in_lsb, _full(in_lsb.type, 1))
+  # After jaxlib 0.5.2, XLA packs pairs of `[u]int4` values into a `uint8`
+  # value with the first in the least significant bits and the second in the
+  # most significant. Before jaxlib 0.5.2, the order was reversed.
+  in_msb = _mod(offsets, _full(offsets.type, 2), signed=False)
+  if jaxlib_version < (0, 5, 2):
+    in_msb = arith_dialect.xori(in_msb, _full(in_msb.type, 1))
   shift = _mul(in_msb, _full(in_msb.type, 4))
   shift = _ir_cast(shift, values.type, signed=False)
   values = arith_dialect.shrui(values, shift)
